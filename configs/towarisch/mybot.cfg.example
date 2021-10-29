@@ -1,0 +1,17 @@
+[tgbot]
+token = <PLACE YOUR TOKEN HERE>
+
+[weather]
+token = <TOKEN FROM OPEN WEATHER MAP>
+
+[owners]
+id = ilyalavrinov
+
+[proxy-socks5]
+server = 127.0.0.1:8081
+user = ilyalavrinov
+pass = ilyalavrinov
+
+[redis]
+server = 127.0.0.1:6379
+db-common = 0
