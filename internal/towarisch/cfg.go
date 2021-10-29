@@ -1,8 +1,11 @@
-package mybot
+package towarisch
 
-import "github.com/admirallarimda/tgbotbase"
-import "gopkg.in/gcfg.v1"
-import "log"
+import (
+	"log"
+
+	"github.com/admirallarimda/tgbotbase"
+	"gopkg.in/gcfg.v1"
+)
 
 type Config struct {
 	tgbotbase.Config

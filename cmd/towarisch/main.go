@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/ilyalavrinov/tgbot-betterthanpbelov/mybot"
+	"github.com/ilyalavrinov/tgbots/internal/towarisch"
 )
 
 const cfg_filename = "mybot.cfg"
@@ -15,7 +15,7 @@ func main() {
 
 	log.Print("Starting my bot")
 
-	err := mybot.Start(cfg_filename)
+	err := towarisch.Start(cfg_filename)
 	if err != nil {
 		log.Printf("My bot could not be started due to error: %s", err)
 	}

@@ -1,10 +1,10 @@
-package mybot
+package towarisch
 
 import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/admirallarimda/tgbotbase"
-	cmd "github.com/ilyalavrinov/tgbot-betterthanpbelov/mybot/commandhandler"
+	cmd "github.com/ilyalavrinov/tgbots/internal/towarisch/commandhandler"
 )
 
 func Start(cfg_filename string) error {
