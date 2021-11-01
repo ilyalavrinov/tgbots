@@ -1,14 +1,18 @@
 package cmd
 
-import "log"
-import "time"
-import "strings"
-import "os"
-import "io"
-import "path"
-import "net/http"
-import "gopkg.in/telegram-bot-api.v4"
-import "github.com/admirallarimda/tgbotbase"
+import (
+	"context"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"path"
+	"strings"
+	"time"
+
+	"github.com/ilyalavrinov/tgbots/pkg/tgbotbase"
+	tgbotapi "gopkg.in/telegram-bot-api.v4"
+)
 
 type kittiesHandler struct {
 	tgbotbase.BaseHandler
@@ -33,7 +37,7 @@ func (h *kittiesHandler) Name() string {
 
 func (h *kittiesHandler) Run() {
 	now := time.Now()
-	props, _ := h.properties.GetEveryHavingProperty("catTime")
+	props, _ := h.properties.GetEveryHavingProperty(context.TODO(), "catTime")
 	for _, prop := range props {
 		if (prop.User != 0) && (tgbotbase.ChatID(prop.User) != prop.Chat) {
 			log.Printf("Morning kitties: Skipping special setting for user %d in chat %d", prop.User, prop.Chat)

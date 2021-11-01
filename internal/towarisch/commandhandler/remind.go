@@ -1,13 +1,18 @@
 package cmd
 
-import "github.com/admirallarimda/tgbotbase"
-import "log"
-import "regexp"
-import "time"
-import "strconv"
-import "errors"
-import "fmt"
-import "gopkg.in/telegram-bot-api.v4"
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log"
+	"regexp"
+	"strconv"
+	"time"
+
+	"github.com/ilyalavrinov/tgbots/pkg/tgbotbase"
+
+	tgbotapi "gopkg.in/telegram-bot-api.v4"
+)
 
 const timeFormat_Out_Confirm = "2006-01-02 15:04:05 MST"
 
@@ -118,7 +123,7 @@ func (h *remindHandler) HandleOne(msg tgbotapi.Message) {
 		t:       t})
 	h.cron.AddJob(t, &job)
 
-	tz, _ := h.properties.GetProperty("timezone", tgbotbase.UserID(msg.From.ID), tgbotbase.ChatID(msg.Chat.ID))
+	tz, _ := h.properties.GetProperty(context.TODO(), "timezone", tgbotbase.UserID(msg.From.ID), tgbotbase.ChatID(msg.Chat.ID))
 	loc, err := time.LoadLocation(tz)
 	if err != nil {
 		log.Printf("Could not load timezone %s correctly; location loaded with error: %s", tz, err)

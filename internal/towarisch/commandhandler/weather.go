@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -10,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/admirallarimda/tgbotbase"
+	"github.com/ilyalavrinov/tgbots/pkg/tgbotbase"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
 )
 
@@ -57,7 +58,7 @@ func (h *weatherHandler) determineCity(msg tgbotapi.Message) (int64, error) {
 }
 
 func getCityIDFromProperty(props tgbotbase.PropertyStorage, conn *redis.Client, userID tgbotbase.UserID, chatID tgbotbase.ChatID) (int64, error) {
-	city, err := props.GetProperty("city", userID, chatID)
+	city, err := props.GetProperty(context.TODO(), "city", userID, chatID)
 	if err != nil {
 		log.Printf("Could not get weather city property due to error: %s", err)
 		return 0, err
@@ -70,7 +71,7 @@ func getCityIDByName(conn *redis.Client, city string) (int64, error) {
 	city = strings.ToLower(city)
 
 	key := fmt.Sprintf("openweathermap:city:%s", city)
-	result := conn.HGet(key, "id")
+	result := conn.HGet(context.TODO(), key, "id")
 	if result.Err() != nil {
 		log.Printf("Could not HGet for key '%s', error: %s", key, result.Err())
 		return 0, result.Err()

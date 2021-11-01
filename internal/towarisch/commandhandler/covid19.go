@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -15,7 +16,7 @@ import (
 	"github.com/gocolly/colly"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/admirallarimda/tgbotbase"
+	"github.com/ilyalavrinov/tgbots/pkg/tgbotbase"
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
 )
 
@@ -69,7 +70,7 @@ func (h *covid19Handler) Init(outMsgCh chan<- tgbotapi.Chattable, srvCh chan<- t
 
 func (h *covid19Handler) Run() {
 	chatsToNotify := make([]tgbotbase.ChatID, 0)
-	props, _ := h.props.GetEveryHavingProperty("covid19Time")
+	props, _ := h.props.GetEveryHavingProperty(context.TODO(), "covid19Time")
 	for _, prop := range props {
 		if (prop.User != 0) && (tgbotbase.ChatID(prop.User) != prop.Chat) {
 			log.Printf("COVID-19: Skipping special setting for user %d in chat %d", prop.User, prop.Chat)
@@ -86,7 +87,7 @@ func (h *covid19Handler) Run() {
 		"China":         "🇨🇳Китай",
 		nnID:            "🦌НижОбла"}
 	countriesOfInterest := []string{"World", "Russia", nnID, "United States"}
-	prevLastCasesS, _ := h.props.GetProperty("covidLastCasesRussia", tgbotbase.UserID(0), tgbotbase.ChatID(0))
+	prevLastCasesS, _ := h.props.GetProperty(context.TODO(), "covidLastCasesRussia", tgbotbase.UserID(0), tgbotbase.ChatID(0))
 	prevLastCases, err := strconv.Atoi(prevLastCasesS)
 	if err != nil {
 		prevLastCases = 0
@@ -103,7 +104,7 @@ func (h *covid19Handler) Run() {
 					continue
 				}
 				prevLastCases = lastCases
-				h.props.SetPropertyForUserInChat("covidLastCasesRussia", tgbotbase.UserID(0), tgbotbase.ChatID(0), strconv.Itoa(lastCases))
+				h.props.SetPropertyForUserInChat(context.TODO(), "covidLastCasesRussia", tgbotbase.UserID(0), tgbotbase.ChatID(0), strconv.Itoa(lastCases))
 
 				text := fmt.Sprintf("Обновление \\#covid19")
 				for _, name := range countriesOfInterest {
@@ -157,11 +158,13 @@ const (
 )
 
 type casesData struct {
-	date        time.Time
-	newCases    int
-	totalCases  int
-	newDeaths   int
-	totalDeaths int
+	date            time.Time
+	newCases        int
+	newCasesGrowth  int
+	totalCases      int
+	newDeaths       int
+	newDeathsGrowth int
+	totalDeaths     int
 }
 
 func (job *covidJob) Do(scheduledWhen time.Time, cron tgbotbase.Cron) {
@@ -232,6 +235,9 @@ func (j *covidUpdateJob) Do(scheduledWhen time.Time, cron tgbotbase.Cron) {
 	raw := make(map[string][]casesData, 200)
 	latest := make(map[string]casesData, 200)
 	dates := make(map[string]time.Time, 200)
+
+	var prevDayInfo casesData
+
 	for _, line := range data {
 		d, _ := time.Parse("2006-01-02", line[colDate])
 
@@ -240,12 +246,16 @@ func (j *covidUpdateJob) Do(scheduledWhen time.Time, cron tgbotbase.Cron) {
 		newDeaths, _ := strconv.Atoi(line[colNewDeaths])
 		totalDeaths, _ := strconv.Atoi(line[colTotalDeaths])
 		cinfo := casesData{
-			date:        d,
-			newCases:    newCases,
-			totalCases:  totalCases,
-			newDeaths:   newDeaths,
-			totalDeaths: totalDeaths,
+			date:            d,
+			newCases:        newCases,
+			newCasesGrowth:  newCases - prevDayInfo.newCases,
+			totalCases:      totalCases,
+			newDeaths:       newDeaths,
+			newDeathsGrowth: prevDayInfo.newDeaths,
+			totalDeaths:     totalDeaths,
 		}
+
+		prevDayInfo = cinfo
 
 		// assuming that dates are ordered
 		country := line[colCountry]

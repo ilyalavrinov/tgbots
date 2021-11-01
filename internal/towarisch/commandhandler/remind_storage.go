@@ -1,7 +1,10 @@
 package cmd
 
-import "time"
-import "github.com/admirallarimda/tgbotbase"
+import (
+	"time"
+
+	"github.com/ilyalavrinov/tgbots/pkg/tgbotbase"
+)
 
 type Reminder struct {
 	t       time.Time

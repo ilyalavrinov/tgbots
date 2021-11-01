@@ -1,12 +1,13 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/admirallarimda/tgbotbase"
+	"github.com/ilyalavrinov/tgbots/pkg/tgbotbase"
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
 )
 
@@ -33,7 +34,7 @@ func (h *newsNNHandler) Name() string {
 
 func (h *newsNNHandler) Run() {
 	now := time.Now()
-	props, _ := h.properties.GetEveryHavingProperty("nnNewsTime")
+	props, _ := h.properties.GetEveryHavingProperty(context.TODO(), "nnNewsTime")
 	for _, prop := range props {
 		if (prop.User != 0) && (tgbotbase.ChatID(prop.User) != prop.Chat) {
 			log.Printf("NN News: Skipping special setting for user %d in chat %d", prop.User, prop.Chat)

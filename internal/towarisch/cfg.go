@@ -3,7 +3,7 @@ package towarisch
 import (
 	"log"
 
-	"github.com/admirallarimda/tgbotbase"
+	"github.com/ilyalavrinov/tgbots/pkg/tgbotbase"
 	"gopkg.in/gcfg.v1"
 )
 

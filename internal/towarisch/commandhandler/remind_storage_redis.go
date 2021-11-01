@@ -1,14 +1,17 @@
 package cmd
 
-import "fmt"
-import "time"
-import "strings"
-import "strconv"
-import "errors"
-import "log"
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log"
+	"strconv"
+	"strings"
+	"time"
 
-import "github.com/go-redis/redis"
-import "github.com/admirallarimda/tgbotbase"
+	"github.com/go-redis/redis/v8"
+	"github.com/ilyalavrinov/tgbots/pkg/tgbotbase"
+)
 
 var remindStart time.Time = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 
@@ -57,15 +60,15 @@ func keyToReminder(key string) (*Reminder, error) {
 }
 
 func (s *RedisReminderStorage) AddReminder(r Reminder) {
-	s.client.Set(reminderKey(r), 0, r.t.Add(24*time.Hour).Sub(time.Now()))
+	s.client.Set(context.TODO(), reminderKey(r), 0, r.t.Add(24*time.Hour).Sub(time.Now()))
 }
 
 func (s *RedisReminderStorage) RemoveReminder(r Reminder) {
-	s.client.Del(reminderKey(r))
+	s.client.Del(context.TODO(), reminderKey(r))
 }
 
 func (s *RedisReminderStorage) LoadAll() []Reminder {
-	keys, err := tgbotbase.GetAllKeys(s.client, "reminder:*")
+	keys, err := tgbotbase.GetAllKeys(context.TODO(), s.client, "reminder:*")
 	if err != nil {
 		log.Printf("redisReminder: could not load stored reminders due to error: %s", err)
 		return nil

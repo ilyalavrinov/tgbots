@@ -1,12 +1,13 @@
 package cmd
 
 import (
+	"context"
 	"log"
 	"time"
 
-	"github.com/admirallarimda/tgbotbase"
-	"github.com/go-redis/redis"
-	"gopkg.in/telegram-bot-api.v4"
+	"github.com/go-redis/redis/v8"
+	"github.com/ilyalavrinov/tgbots/pkg/tgbotbase"
+	tgbotapi "gopkg.in/telegram-bot-api.v4"
 )
 
 type weatherMorningHandler struct {
@@ -38,7 +39,7 @@ func (h *weatherMorningHandler) Init(outMsgCh chan<- tgbotapi.Chattable, srvCh c
 func (h *weatherMorningHandler) Run() {
 	// TODO: same as for kitties. Write common func
 	now := time.Now()
-	props, _ := h.props.GetEveryHavingProperty("weatherTime")
+	props, _ := h.props.GetEveryHavingProperty(context.TODO(), "weatherTime")
 	for _, prop := range props {
 		if (prop.User != 0) && (tgbotbase.ChatID(prop.User) != prop.Chat) {
 			log.Printf("Morning weather: Skipping special setting for user %d in chat %d", prop.User, prop.Chat)

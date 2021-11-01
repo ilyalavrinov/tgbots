@@ -1,9 +1,13 @@
 package cmd
 
-import "log"
-import "strings"
-import "gopkg.in/telegram-bot-api.v4"
-import "github.com/admirallarimda/tgbotbase"
+import (
+	"context"
+	"log"
+	"strings"
+
+	"github.com/ilyalavrinov/tgbots/pkg/tgbotbase"
+	tgbotapi "gopkg.in/telegram-bot-api.v4"
+)
 
 type propertyHandler struct {
 	storage tgbotbase.PropertyStorage
@@ -32,7 +36,7 @@ func (h *propertyHandler) HandleOne(msg tgbotapi.Message) {
 		user = 0
 	}
 
-	err := h.storage.SetPropertyForUserInChat(propname, user, chat, propvalue)
+	err := h.storage.SetPropertyForUserInChat(context.TODO(), propname, user, chat, propvalue)
 	if err != nil {
 		log.Printf("Could not correctly set property '%s' for user %d chat %d due to error: %s", propname, user, chat, err)
 	}

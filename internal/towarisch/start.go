@@ -1,10 +1,12 @@
 package towarisch
 
 import (
+	"context"
+
 	log "github.com/sirupsen/logrus"
 
-	"github.com/admirallarimda/tgbotbase"
 	cmd "github.com/ilyalavrinov/tgbots/internal/towarisch/commandhandler"
+	"github.com/ilyalavrinov/tgbots/pkg/tgbotbase"
 )
 
 func Start(cfg_filename string) error {
@@ -24,7 +26,7 @@ func Start(cfg_filename string) error {
 	bot := tgbotbase.NewBot(tgcfg)
 
 	rediscfg := fullcfg.Redis
-	redispool := tgbotbase.NewRedisPool(rediscfg)
+	redispool := tgbotbase.NewRedisPool(context.TODO(), rediscfg)
 	propstorage := tgbotbase.NewRedisPropertyStorage(redispool)
 	remindstorage := cmd.NewRedisReminderStorage(redispool)
 
