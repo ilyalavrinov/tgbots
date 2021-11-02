@@ -1,4 +1,4 @@
-package cmd
+package yandexnews
 
 import (
 	"encoding/json"
@@ -24,18 +24,18 @@ var YaNews = map[YaNewsTopic]string{
 	YaNewsNN:      "https://news.yandex.ru/Nizhny_Novgorod/index5.utf8.js",
 }
 
-type yaNewsEntry struct {
+type YaNewsEntry struct {
 	Title string `json:"title"`
 	URL   string `json:"url"`
 	Date  string `json:"date"`
 	Time  string `json:"time"`
 }
 
-func (n yaNewsEntry) toMarkdown() string {
+func (n YaNewsEntry) ToMarkdown() string {
 	return fmt.Sprintf("%s [%s](%s)", tgbotutil.EscapeMarkdown(n.Time), tgbotutil.EscapeMarkdown(n.Title), n.URL)
 }
 
-func loadYaNews(topic YaNewsTopic) ([]yaNewsEntry, error) {
+func LoadYaNews(topic YaNewsTopic) ([]YaNewsEntry, error) {
 	url, found := YaNews[topic]
 	if !found {
 		log.WithFields(log.Fields{"topic": topic}).Error("unknown news topic")
@@ -59,7 +59,7 @@ func loadYaNews(topic YaNewsTopic) ([]yaNewsEntry, error) {
 	start := strings.IndexByte(bodyS, '[')
 	end := strings.IndexByte(bodyS, ']')
 	jsontext := body[start : end+1]
-	news := make([]yaNewsEntry, 0)
+	news := make([]YaNewsEntry, 0)
 	if err = json.Unmarshal(jsontext, &news); err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("read failed")
 		return nil, err

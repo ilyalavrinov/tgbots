@@ -16,6 +16,7 @@ import (
 	"github.com/gocolly/colly"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/ilyalavrinov/tgbots/internal/towarisch/commandhandler/yandexnews"
 	"github.com/ilyalavrinov/tgbots/pkg/tgbotbase"
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
 )
@@ -109,10 +110,10 @@ func (h *covid19Handler) Run() {
 					}
 				}
 				text = fmt.Sprintf("%s\n[карта](https://gisanddata.maps.arcgis.com/apps/opsdashboard/index.html#/bda7594740fd40299423467b48e9ecf6) \\+ [графики](https://ourworldindata.org/coronavirus#growth-country-by-country-view)", text)
-				if news, err := loadYaNews(YaNewsCovid19); err == nil && len(news) > 0 {
+				if news, err := yandexnews.LoadYaNews(yandexnews.YaNewsCovid19); err == nil && len(news) > 0 {
 					text = fmt.Sprintf("%s\n\nПоследние новости:", text)
 					for _, n := range news {
-						text = fmt.Sprintf("%s\n%s", text, n.toMarkdown())
+						text = fmt.Sprintf("%s\n%s", text, n.ToMarkdown())
 					}
 				}
 				for _, chatID := range chatsToNotify {
@@ -137,7 +138,7 @@ type covidJob struct {
 	ch     chan<- tgbotbase.ChatID
 }
 
-var _ tgbotbase.CronJob = &weatherJob{}
+var _ tgbotbase.CronJob = &covidJob{}
 
 const (
 	colDate        = 0

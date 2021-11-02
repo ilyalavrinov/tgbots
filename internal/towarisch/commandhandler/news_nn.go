@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/ilyalavrinov/tgbots/internal/towarisch/commandhandler/yandexnews"
 	"github.com/ilyalavrinov/tgbots/pkg/tgbotbase"
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
 )
@@ -60,7 +61,7 @@ type newsNNJob struct {
 func (job *newsNNJob) Do(scheduledWhen time.Time, cron tgbotbase.Cron) {
 	defer cron.AddJob(scheduledWhen.Add(24*time.Hour), job)
 
-	news, err := loadYaNews(YaNewsNN)
+	news, err := yandexnews.LoadYaNews(yandexnews.YaNewsNN)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("error loading NN news")
 		return
@@ -73,7 +74,7 @@ func (job *newsNNJob) Do(scheduledWhen time.Time, cron tgbotbase.Cron) {
 
 	text := "Нижегородские вести:"
 	for _, n := range news {
-		text = fmt.Sprintf("%s\n%s", text, n.toMarkdown())
+		text = fmt.Sprintf("%s\n%s", text, n.ToMarkdown())
 	}
 
 	msg := tgbotapi.NewMessage(int64(job.chatID), text)
