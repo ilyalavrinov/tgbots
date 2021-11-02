@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/ilyalavrinov/tgbots/pkg/tgbotutil"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -19,8 +20,8 @@ const (
 )
 
 var YaNews = map[YaNewsTopic]string{
-	YaNewsCovid19: "https://news.yandex.by/ru/koronavirus5.utf8.js",
-	YaNewsNN:      "https://news.yandex.by/Nizhny_Novgorod/index5.utf8.js",
+	YaNewsCovid19: "https://news.yandex.ru/ru/koronavirus5.utf8.js",
+	YaNewsNN:      "https://news.yandex.ru/Nizhny_Novgorod/index5.utf8.js",
 }
 
 type yaNewsEntry struct {
@@ -31,7 +32,7 @@ type yaNewsEntry struct {
 }
 
 func (n yaNewsEntry) toMarkdown() string {
-	return fmt.Sprintf("%s [%s](%s)", escapeMarkdownSpecial(n.Time), escapeMarkdownSpecial(n.Title), n.URL)
+	return fmt.Sprintf("%s [%s](%s)", tgbotutil.EscapeMarkdown(n.Time), tgbotutil.EscapeMarkdown(n.Title), n.URL)
 }
 
 func loadYaNews(topic YaNewsTopic) ([]yaNewsEntry, error) {

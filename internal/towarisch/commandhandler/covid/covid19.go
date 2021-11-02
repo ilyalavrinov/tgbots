@@ -1,4 +1,4 @@
-package cmd
+package covid
 
 import (
 	"context"
@@ -20,18 +20,9 @@ import (
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
 )
 
-var markdownToEscape = []string{"\\", "`", "*", "_", "{", "}", "[", "]", "(", ")", "#", "+", "-", ".", "!", "|"}
-
 const (
 	nnID = "52region"
 )
-
-func escapeMarkdownSpecial(s string) string {
-	for _, e := range markdownToEscape {
-		s = strings.Replace(s, e, "\\"+e, -1)
-	}
-	return s
-}
 
 func atoi(s string) int {
 	res, err := strconv.Atoi(s)
