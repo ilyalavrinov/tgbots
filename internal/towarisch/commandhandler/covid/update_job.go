@@ -41,11 +41,13 @@ type covidUpdateJob struct {
 func (j *covidUpdateJob) Do(scheduledWhen time.Time, cron tgbotbase.Cron) {
 	defer cron.AddJob(scheduledWhen.Add(30*time.Minute), j)
 
+	/* TODO: it loads too old data, needs rework
 	_, err := getInternationalData(j.history)
 	if err != nil {
 		log.WithField("err", err).Error("cloud not get international data")
 		return
 	}
+	*/
 
 	russiaData, err := getRussiaData(j.history)
 	if err != nil {
@@ -95,13 +97,19 @@ func getInternationalData(h History) (map[string]casesData, error) {
 		return nil, err
 	}
 
+	headerRead := false
 	for _, line := range data {
+		// TODO: dirty hack to skip header. Use csvreader properly instead
+		if !headerRead {
+			headerRead = true
+			continue
+		}
 		d, _ := time.Parse("2006-01-02", line[colDate])
 
 		_, err := h.addIfNotExist(context.TODO(), line[colCountry], d, atoi(line[colTotalCases]), atoi(line[colTotalDeaths]))
 		if err != nil {
 			log.WithFields(log.Fields{"err": err, "location": line[colCountry]}).Error("cloud not save data")
-			return nil, err
+			continue
 		}
 	}
 
@@ -117,21 +125,15 @@ func statToInt(s string) int {
 }
 
 type chartDayData struct {
-	Date      string
-	DateVal   time.Time
-	Sick      string
-	SickVal   int
-	Healed    string
-	HealedVal int
-	Died      string
-	DiedVal   int
+	Date    string
+	DateVal time.Time
+	Sick    int
+	Healed  int
+	Died    int
 }
 
 func (d *chartDayData) convert() {
-	d.DateVal, _ = time.Parse("04.05.2006", d.Date)
-	d.SickVal = statToInt(d.Sick)
-	d.HealedVal = statToInt(d.Healed)
-	d.DiedVal = statToInt(d.Died)
+	d.DateVal, _ = time.Parse("02.01.2006", d.Date)
 }
 
 const (
@@ -164,11 +166,11 @@ func getRussiaData(h History) (map[string]bool, error) {
 				latestKnownDate = d.DateVal
 			}
 
-			added, err := h.addIfNotExist(context.TODO(), locationRussia, d.DateVal, d.SickVal, d.DiedVal)
+			added, err := h.addIfNotExist(context.TODO(), locationRussia, d.DateVal, d.Sick, d.Died)
 			if err != nil {
 				log.WithFields(log.Fields{"err": err}).Error("could not save russia data to history")
 				crawlError = err
-				return
+				continue
 			}
 			if added && d.DateVal.After(latestUpdate) {
 				latestUpdate = d.DateVal

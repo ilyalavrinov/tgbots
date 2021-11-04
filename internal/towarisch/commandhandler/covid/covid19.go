@@ -14,10 +14,6 @@ import (
 )
 
 func atoi(s string) int {
-	if s == "" {
-		return 0 // suppressing errors
-	}
-
 	res, err := strconv.Atoi(s)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err, "str": s}).Error("Could not convert in atoi")
