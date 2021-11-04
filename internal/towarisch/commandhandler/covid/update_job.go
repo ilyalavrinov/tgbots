@@ -1,6 +1,7 @@
 package covid
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -8,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"strconv"
 	"strings"
 	"time"
 
@@ -34,35 +34,40 @@ type covidData struct {
 }
 
 type covidUpdateJob struct {
-	updates chan<- covidData
+	updates        chan<- history
+	historyStorage history
 }
 
 func (j *covidUpdateJob) Do(scheduledWhen time.Time, cron tgbotbase.Cron) {
 	defer cron.AddJob(scheduledWhen.Add(30*time.Minute), j)
 
-	data := make(map[string]casesData, 200)
-
-	intlData, err := getInternationalData()
-	if err == nil {
-		for key, val := range intlData {
-			data[key] = val
-		}
+	_, err := getInternationalData(j.historyStorage)
+	if err != nil {
+		log.WithField("err", err).Error("cloud not get international data")
+		return
 	}
 
-	russiaData, err := getRussiaData()
-	if err == nil {
-		for key, val := range russiaData {
-			data[key] = val
-		}
+	russiaData, err := getRussiaData(j.historyStorage)
+	if err != nil {
+		log.WithField("err", err).Error("cloud not get russia data")
+		return
 	}
 
-	j.updates <- covidData{
-		countryRaw:    nil,
-		countryLatest: data,
+	if len(russiaData) > 0 { // currently we careonly if russiadata get updated
+		j.updates <- j.historyStorage
 	}
 }
 
-func getInternationalData() (map[string]casesData, error) {
+const (
+	colDate        = 0
+	colCountry     = 1
+	colNewCases    = 2
+	colNewDeaths   = 3
+	colTotalCases  = 4
+	colTotalDeaths = 5
+)
+
+func getInternationalData(h history) (map[string]casesData, error) {
 	log.Debug("Start covid update")
 	url := "https://covid.ourworldindata.org/data/ecdc/full_data.csv"
 	fpath := path.Join("/tmp", "ilya-tgbot", "covid")
@@ -81,6 +86,7 @@ func getInternationalData() (map[string]casesData, error) {
 		log.Printf("Could not open covid info at %q, err: %s", fname, err)
 		return nil, err
 	}
+	defer os.Remove(fname)
 
 	r := csv.NewReader(f)
 	data, err := r.ReadAll()
@@ -89,63 +95,18 @@ func getInternationalData() (map[string]casesData, error) {
 		return nil, err
 	}
 
-	raw := make(map[string][]casesData, 200)
-	latest := make(map[string]casesData, 200)
-	dates := make(map[string]time.Time, 200)
-
-	var prevDayInfo casesData
-
 	for _, line := range data {
 		d, _ := time.Parse("2006-01-02", line[colDate])
 
-		newCases, _ := strconv.Atoi(line[colNewCases])
-		totalCases, _ := strconv.Atoi(line[colTotalCases])
-		newDeaths, _ := strconv.Atoi(line[colNewDeaths])
-		totalDeaths, _ := strconv.Atoi(line[colTotalDeaths])
-		cinfo := casesData{
-			date:            d,
-			newCases:        newCases,
-			newCasesGrowth:  newCases - prevDayInfo.newCases,
-			totalCases:      totalCases,
-			newDeaths:       newDeaths,
-			newDeathsGrowth: prevDayInfo.newDeaths,
-			totalDeaths:     totalDeaths,
+		_, err := h.addIfNotExist(context.TODO(), line[colCountry], d, atoi(line[colTotalCases]), atoi(line[colTotalDeaths]))
+		if err != nil {
+			log.WithFields(log.Fields{"err": err, "location": line[colCountry]}).Error("cloud not save data")
+			return nil, err
 		}
-
-		prevDayInfo = cinfo
-
-		// assuming that dates are ordered
-		country := line[colCountry]
-		raw[country] = append(raw[country], cinfo)
-
-		date, found := dates[country]
-		if found && d.Before(date) {
-			continue
-		}
-
-		dates[country] = d
-		latest[country] = cinfo
 	}
 
-	return latest, nil
-}
-
-type rusTotalStats struct {
-	Sick          string
-	sickVal       int
-	SickChange    string
-	sickChangeVal int
-	Died          string
-	diedVal       int
-	DiedChange    string
-	diedChangeVal int
-}
-
-func (stat *rusTotalStats) toInt() {
-	stat.sickVal = statToInt(stat.Sick)
-	stat.sickChangeVal = statToInt(stat.SickChange)
-	stat.diedVal = statToInt(stat.Died)
-	stat.diedChangeVal = statToInt(stat.DiedChange)
+	// I don't care now fow internation data updates - no indication for its update for now
+	return nil, nil
 }
 
 func statToInt(s string) int {
@@ -155,60 +116,101 @@ func statToInt(s string) int {
 	return atoi(s)
 }
 
-const (
-	nnRegionCode = "RU-NIZ"
-)
-
-type regionStats struct {
-	Code     string
-	Sick     int
-	Died     int
-	SickIncr int `json:"sick_incr"`
-	DiedIncr int `json:"died_incr"`
+type chartDayData struct {
+	Date      string
+	DateVal   time.Time
+	Sick      string
+	SickVal   int
+	Healed    string
+	HealedVal int
+	Died      string
+	DiedVal   int
 }
 
-func getRussiaData() (map[string]casesData, error) {
-	rusCases := make(map[string]casesData)
+func (d *chartDayData) convert() {
+	d.DateVal, _ = time.Parse("04.05.2006", d.Date)
+	d.SickVal = statToInt(d.Sick)
+	d.HealedVal = statToInt(d.Healed)
+	d.DiedVal = statToInt(d.Died)
+}
 
-	cases := casesData{}
+const (
+	locationRussia   = "RU-TOTAL"
+	locationRussiaNN = "RU-NIZ"
+)
+
+func getRussiaData(h history) (map[string]bool, error) {
+	locationsUpdated := make(map[string]bool, 0)
+	var latestKnownDate time.Time
+	var latestUpdate time.Time
+	var crawlError error
+
 	c := colly.NewCollector()
 	c.OnHTML("cv-stats-virus", func(e *colly.HTMLElement) {
-		text := e.Attr(":stats-data") // total rus data
-
-		var stat rusTotalStats
-		err := json.Unmarshal([]byte(text), &stat)
+		text := e.Attr(":charts-data") // per day distribution
+		var chartData []chartDayData
+		err := json.Unmarshal([]byte(text), &chartData)
 		if err != nil {
-			log.WithFields(log.Fields{"text": text, "err": err}).Error("could not unmarshal russia stats")
+			log.WithFields(log.Fields{"text": text, "err": err}).Error("could not unmarshal russia per-day stats")
+			crawlError = err
 			return
 		}
 
-		stat.toInt()
+		log.WithField("days", len(chartData)).Debug("read covid data for russia")
+		for _, d := range chartData {
+			d.convert()
 
-		cases.totalCases = stat.sickVal
-		cases.newCases = stat.sickChangeVal
-		cases.totalDeaths = stat.diedVal
-		cases.newDeaths = stat.diedChangeVal
+			if d.DateVal.After(latestKnownDate) {
+				latestKnownDate = d.DateVal
+			}
+
+			added, err := h.addIfNotExist(context.TODO(), locationRussia, d.DateVal, d.SickVal, d.DiedVal)
+			if err != nil {
+				log.WithFields(log.Fields{"err": err}).Error("could not save russia data to history")
+				crawlError = err
+				return
+			}
+			if added && d.DateVal.After(latestUpdate) {
+				latestUpdate = d.DateVal
+			}
+		}
 	})
 
-	nnCases := casesData{}
+	if !latestUpdate.Equal(latestKnownDate) { // we haven't got the latest day update, i.e. we already know most recent data and notified everyone
+		return nil, crawlError
+	}
+
+	locationsUpdated[locationRussia] = true
 	c.OnHTML("cv-spread-overview", func(e *colly.HTMLElement) {
 		text := e.Attr(":spread-data")
+
+		type regionStats struct {
+			Code     string
+			Sick     int
+			Died     int
+			SickIncr int `json:"sick_incr"`
+			DiedIncr int `json:"died_incr"`
+		}
 		stats := make([]regionStats, 0)
+
 		err := json.Unmarshal([]byte(text), &stats)
 		if err != nil {
 			log.WithFields(log.Fields{"text": text, "err": err}).Error("could not unmarshal region stats")
+			crawlError = err
 			return
 		}
 
+		log.WithField("regions", len(stats)).Debug("read covid data for regions")
 		for _, s := range stats {
-			if s.Code != nnRegionCode {
+			added, err := h.addIfNotExist(context.TODO(), s.Code, latestKnownDate, s.Sick, s.Died)
+			if err != nil {
+				log.WithFields(log.Fields{"location": s.Code, "err": err}).Error("could not save history for region")
 				continue
 			}
 
-			nnCases.totalCases = s.Sick
-			nnCases.newCases = s.SickIncr
-			nnCases.totalDeaths = s.Died
-			nnCases.newDeaths = s.DiedIncr
+			if added {
+				locationsUpdated[s.Code] = true
+			}
 		}
 	})
 
@@ -217,10 +219,7 @@ func getRussiaData() (map[string]casesData, error) {
 	if err != nil {
 		log.Printf("Error! %s\n", err)
 	}
-	log.WithFields(log.Fields{"totalCases": cases.totalCases, "NNtotalCases": nnCases.totalCases}).Debug("Finished getting russia covid data")
-	rusCases["Russia"] = cases
-	rusCases[nnID] = nnCases
-	return rusCases, err
+	return locationsUpdated, err
 }
 
 func downloadFile(filepath string, url string) error {
