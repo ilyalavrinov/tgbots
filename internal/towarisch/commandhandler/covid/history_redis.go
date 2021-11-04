@@ -2,6 +2,7 @@ package covid
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -23,13 +24,46 @@ func newRedisHistory(pool tgbotbase.RedisPool) *redisHistory {
 	}
 }
 
+var errTooOld = errors.New("incoming data too old to put into cache")
+
+const (
+	ageLimit = 7 * 24 * time.Hour
+	ttl      = 7 * 24 * time.Hour
+)
+
 func key(location string, day time.Time) string {
 	return fmt.Sprintf("covid:history:%s:%s", strings.ReplaceAll(location, " ", ""), day.Format("20060102"))
 }
 
 func (r *redisHistory) add(ctx context.Context, location string, day time.Time, totalSick, totalDead int) error {
-	res := r.client.HSet(ctx, key(location, day), map[string]interface{}{"sick": totalSick, "dead": totalDead})
-	return res.Err()
+	if time.Now().Sub(day) > 7*24*time.Hour {
+		return errTooOld
+	}
+	_, err := r.client.HSet(ctx, key(location, day), map[string]interface{}{"sick": totalSick, "dead": totalDead}).Result()
+	if err != nil {
+		return err
+	}
+	return r.client.Expire(ctx, key(location, day), ttl).Err()
+}
+
+func (r *redisHistory) addIfNotExist(ctx context.Context, location string, day time.Time, totalSick, totalDead int) (bool, error) {
+	exist, err := r.client.Exists(ctx, key(location, day)).Result()
+	if err != nil {
+		return false, err
+	}
+	if exist > 0 {
+		return false, nil
+	}
+
+	err = r.add(ctx, location, day, totalSick, totalDead)
+	if err != nil {
+		if errors.Is(err, errTooOld) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }
 
 func convDay(res map[string]string) (dayData, error) {

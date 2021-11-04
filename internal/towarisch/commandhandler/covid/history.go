@@ -17,5 +17,6 @@ type dayData struct {
 
 type history interface {
 	add(ctx context.Context, location string, day time.Time, totalSick, totalDead int) error
+	addIfNotExist(ctx context.Context, location string, day time.Time, totalSick, totalDead int) (added bool, err error)
 	getDay(ctx context.Context, location string, day time.Time) (dayData, error)
 }
