@@ -14,6 +14,10 @@ import (
 )
 
 func atoi(s string) int {
+	if s == "" {
+		return 0 // suppressing errors
+	}
+
 	res, err := strconv.Atoi(s)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err, "str": s}).Error("Could not convert in atoi")
@@ -26,23 +30,24 @@ type covid19Handler struct {
 	props tgbotbase.PropertyStorage
 	cron  tgbotbase.Cron
 
-	updates chan history
+	updates chan History
 	toSend  chan tgbotbase.ChatID
 }
 
 var _ tgbotbase.BackgroundMessageHandler = &covid19Handler{}
 
 func NewCovid19Handler(cron tgbotbase.Cron,
-	props tgbotbase.PropertyStorage) tgbotbase.BackgroundMessageHandler {
+	props tgbotbase.PropertyStorage,
+	history History) tgbotbase.BackgroundMessageHandler {
 	h := &covid19Handler{
 		props: props,
 		cron:  cron,
 
-		updates: make(chan history, 0),
+		updates: make(chan History, 0),
 		toSend:  make(chan tgbotbase.ChatID, 0),
 	}
 
-	h.cron.AddJob(time.Now(), &covidUpdateJob{updates: h.updates})
+	h.cron.AddJob(time.Now().Add(5*time.Second), &covidUpdateJob{updates: h.updates, history: history})
 	return h
 }
 

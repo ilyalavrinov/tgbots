@@ -16,9 +16,9 @@ type redisHistory struct {
 	client *redis.Client
 }
 
-var _ history = &redisHistory{}
+var _ History = &redisHistory{}
 
-func newRedisHistory(pool tgbotbase.RedisPool) *redisHistory {
+func NewRedisHistory(pool tgbotbase.RedisPool) *redisHistory {
 	return &redisHistory{
 		client: pool.GetConnByName("covid"),
 	}

@@ -34,27 +34,27 @@ type covidData struct {
 }
 
 type covidUpdateJob struct {
-	updates        chan<- history
-	historyStorage history
+	updates chan<- History
+	history History
 }
 
 func (j *covidUpdateJob) Do(scheduledWhen time.Time, cron tgbotbase.Cron) {
 	defer cron.AddJob(scheduledWhen.Add(30*time.Minute), j)
 
-	_, err := getInternationalData(j.historyStorage)
+	_, err := getInternationalData(j.history)
 	if err != nil {
 		log.WithField("err", err).Error("cloud not get international data")
 		return
 	}
 
-	russiaData, err := getRussiaData(j.historyStorage)
+	russiaData, err := getRussiaData(j.history)
 	if err != nil {
 		log.WithField("err", err).Error("cloud not get russia data")
 		return
 	}
 
 	if len(russiaData) > 0 { // currently we careonly if russiadata get updated
-		j.updates <- j.historyStorage
+		j.updates <- j.history
 	}
 }
 
@@ -67,7 +67,7 @@ const (
 	colTotalDeaths = 5
 )
 
-func getInternationalData(h history) (map[string]casesData, error) {
+func getInternationalData(h History) (map[string]casesData, error) {
 	log.Debug("Start covid update")
 	url := "https://covid.ourworldindata.org/data/ecdc/full_data.csv"
 	fpath := path.Join("/tmp", "ilya-tgbot", "covid")
@@ -139,7 +139,7 @@ const (
 	locationRussiaNN = "RU-NIZ"
 )
 
-func getRussiaData(h history) (map[string]bool, error) {
+func getRussiaData(h History) (map[string]bool, error) {
 	locationsUpdated := make(map[string]bool, 0)
 	var latestKnownDate time.Time
 	var latestUpdate time.Time

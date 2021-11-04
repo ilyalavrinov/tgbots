@@ -38,7 +38,7 @@ func Start(cfg_filename string) error {
 	bot.AddHandler(tgbotbase.NewIncomingMessageDealer(cmd.NewRemindHandler(cron, remindstorage, propstorage)))
 	bot.AddHandler(tgbotbase.NewBackgroundMessageDealer(cmd.NewKittiesHandler(cron, propstorage)))
 	bot.AddHandler(tgbotbase.NewBackgroundMessageDealer(cmd.NewWeatherMorningHandler(cron, propstorage, redispool, fullcfg.Weather.Token)))
-	bot.AddHandler(tgbotbase.NewBackgroundMessageDealer(covid.NewCovid19Handler(cron, propstorage)))
+	bot.AddHandler(tgbotbase.NewBackgroundMessageDealer(covid.NewCovid19Handler(cron, propstorage, covid.NewRedisHistory(redispool))))
 	bot.AddHandler(tgbotbase.NewBackgroundMessageDealer(cmd.NewNewsNNHandler(cron, propstorage)))
 	bot.Start()
 
