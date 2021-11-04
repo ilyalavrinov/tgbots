@@ -79,7 +79,7 @@ func (h *covid19Handler) Run() {
 		for {
 			updatedHistory := <-h.updates
 
-			text := fmt.Sprintf("Обновление \\#covid19")
+			text := fmt.Sprintf("Обновление \\#covid19: прирост (+скорость прироста)")
 			for _, name := range countriesOfInterest {
 				localName := name
 				if l10n, found := countriesOfInterestL10N[name]; found {
@@ -90,8 +90,8 @@ func (h *covid19Handler) Run() {
 					log.WithFields(log.Fields{"err": err, "location": name}).Error("Failed to get historical data")
 					continue
 				}
-				text = fmt.Sprintf("%s\n***%s***: 🌡 %d \\(\\+%d\\) \\| 💀 %d \\(\\+%d\\)",
-					text, localName, d.sickTotal, d.sickInc, d.deadTotal, d.deadInc)
+				text = fmt.Sprintf("%s\n***%s***: Δ🌡 %d \\(\\%+d\\) \\| Δ💀 %d \\(\\%+d\\)",
+					text, localName, d.sickInc, d.sickIncGrowth, d.deadInc, d.deadIncGrowth)
 			}
 			text = fmt.Sprintf("%s\n[карта](https://gisanddata.maps.arcgis.com/apps/opsdashboard/index.html#/bda7594740fd40299423467b48e9ecf6) \\+ [графики](https://ourworldindata.org/coronavirus#growth-country-by-country-view)", text)
 			if news, err := yandexnews.LoadYaNews(yandexnews.YaNewsCovid19); err == nil && len(news) > 0 {
