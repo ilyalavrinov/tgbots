@@ -63,13 +63,17 @@ func (h *covid19Handler) Run() {
 	}
 
 	countriesOfInterestL10N := map[string]string{
-		"World":          "🌎В мире",
-		locationRussia:   "🇷🇺Россия",
-		"United States":  "🇺🇸США",
-		"Italy":          "🍕Италия",
-		"China":          "🇨🇳Китай",
-		locationRussiaNN: "🦌НижОбла"}
-	countriesOfInterest := []string{"World", locationRussia, locationRussiaNN, "United States"}
+		"World":                 "🌎В мире",
+		locationRussia:          "🇷🇺Россия",
+		"United States":         "🇺🇸США",
+		"Italy":                 "🍕Италия",
+		"China":                 "🇨🇳Китай",
+		locationRussiaNN:        "🦌НижОбла",
+		locationRussiaMSK:       "🎠Мск💰💰💰",
+		locationRussiaMSKRegion: "💰МосОбласть",
+		locationRussiaSPb:       "🌧СПб",
+		locationRussiaSPbRegion: "🚂ЛенОбласть"}
+	countriesOfInterest := []string{locationRussia, locationRussiaNN, locationRussiaSPb, locationRussiaSPbRegion, locationRussiaMSK, locationRussiaMSKRegion}
 
 	go func() {
 		for {

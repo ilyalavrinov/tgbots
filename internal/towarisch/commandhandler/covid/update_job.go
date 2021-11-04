@@ -137,8 +137,12 @@ func (d *chartDayData) convert() {
 }
 
 const (
-	locationRussia   = "RU-TOTAL"
-	locationRussiaNN = "RU-NIZ"
+	locationRussia          = "RU-TOTAL"
+	locationRussiaNN        = "RU-NIZ"
+	locationRussiaMSK       = "RU-MOW"
+	locationRussiaMSKRegion = "RU-MOS"
+	locationRussiaSPb       = "RU-SPE"
+	locationRussiaSPbRegion = "RU-LEN"
 )
 
 func getRussiaData(h History) (map[string]bool, error) {
