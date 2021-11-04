@@ -134,9 +134,13 @@ func (b *Bot) serveReplies() {
 	msg, notClosed := <-b.botChannels.out_msg_chan
 	for ; notClosed; msg, notClosed = <-b.botChannels.out_msg_chan {
 		log.Printf("Will send a reply")
-		_, err := b.bot.Send(msg)
-		if err != nil {
-			log.Printf("Could not sent reply %+v due to error: %s", msg, err)
+		if b.cfg.TGBot.RedirectMsgToLog {
+			log.Printf("Reply: +%v", msg)
+		} else {
+			_, err := b.bot.Send(msg)
+			if err != nil {
+				log.Printf("Could not sent reply %+v due to error: %s", msg, err)
+			}
 		}
 	}
 
