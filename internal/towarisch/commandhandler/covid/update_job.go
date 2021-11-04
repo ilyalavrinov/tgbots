@@ -17,22 +17,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type casesData struct {
-	date            time.Time
-	newCases        int
-	newCasesGrowth  int
-	totalCases      int
-	newDeaths       int
-	newDeathsGrowth int
-	totalDeaths     int
-}
-
-type covidData struct {
-	countryRaw    map[string][]casesData
-	countryLatest map[string]casesData
-	worldLatest   casesData
-}
-
 type covidUpdateJob struct {
 	updates chan<- History
 	history History
@@ -69,7 +53,7 @@ const (
 	colTotalDeaths = 5
 )
 
-func getInternationalData(h History) (map[string]casesData, error) {
+func getInternationalData(h History) (map[string]bool, error) {
 	log.Debug("Start covid update")
 	url := "https://covid.ourworldindata.org/data/ecdc/full_data.csv"
 	fpath := path.Join("/tmp", "ilya-tgbot", "covid")
