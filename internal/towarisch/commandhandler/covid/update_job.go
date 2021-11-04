@@ -25,6 +25,7 @@ type covidUpdateJob struct {
 func (j *covidUpdateJob) Do(scheduledWhen time.Time, cron tgbotbase.Cron) {
 	defer cron.AddJob(scheduledWhen.Add(30*time.Minute), j)
 
+	log.Debug("Starting update of covid data")
 	/* TODO: it loads too old data, needs rework
 	_, err := getInternationalData(j.history)
 	if err != nil {
@@ -39,7 +40,8 @@ func (j *covidUpdateJob) Do(scheduledWhen time.Time, cron tgbotbase.Cron) {
 		return
 	}
 
-	if len(russiaData) > 0 { // currently we careonly if russiadata get updated
+	log.WithField("changes", len(russiaData)).Debug("Checking if update is to be sent")
+	if len(russiaData) > 0 { // currently we care only if russiadata get updated
 		j.updates <- j.history
 	}
 }
@@ -166,12 +168,16 @@ func getRussiaData(h History) (map[string]bool, error) {
 		}
 	})
 
-	if !latestUpdate.Equal(latestKnownDate) { // we haven't got the latest day update, i.e. we already know most recent data and notified everyone
-		return nil, crawlError
-	}
-
-	locationsUpdated[locationRussia] = true
 	c.OnHTML("cv-spread-overview", func(e *colly.HTMLElement) {
+		if latestKnownDate.IsZero() {
+			panic("russia covid side parsing called in wrong order")
+		}
+		if !latestUpdate.Equal(latestKnownDate) { // we haven't got the latest day update, i.e. we already know most recent data and notified everyone
+			log.WithFields(log.Fields{"lastKnownDate": latestKnownDate, "lastUpdate": latestUpdate}).Debug("All data is known, skipping region update")
+			return
+		}
+		locationsUpdated[locationRussia] = true
+
 		text := e.Attr(":spread-data")
 
 		type regionStats struct {
@@ -208,6 +214,9 @@ func getRussiaData(h History) (map[string]bool, error) {
 	err := c.Visit("https://xn--80aesfpebagmfblc0a.xn--p1ai/information") // стопкоронавирус.рф
 	if err != nil {
 		log.Printf("Error! %s\n", err)
+	}
+	if crawlError != nil {
+		log.Printf("Crawl Error! %s\n", crawlError)
 	}
 	return locationsUpdated, err
 }
