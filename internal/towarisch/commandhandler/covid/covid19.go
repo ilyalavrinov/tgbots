@@ -79,7 +79,7 @@ func (h *covid19Handler) Run() {
 		for {
 			updatedHistory := <-h.updates
 
-			text := fmt.Sprintf("Обновление \\#covid19: прирост (+скорость прироста)")
+			text := fmt.Sprintf("Обновление \\#covid19: прирост \\(\\+скорость прироста\\)")
 			for _, name := range countriesOfInterest {
 				localName := name
 				if l10n, found := countriesOfInterestL10N[name]; found {
