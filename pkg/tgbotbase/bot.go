@@ -141,6 +141,7 @@ func (b *Bot) serveReplies() {
 			if err != nil {
 				log.Printf("Could not sent reply %+v due to error: %s", msg, err)
 			}
+			time.Sleep(1 * time.Second) // just in case I accidentally start spamming Telegram API
 		}
 	}
 
