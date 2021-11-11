@@ -8,8 +8,9 @@ import (
 type mark string
 
 const (
-	Good mark = "+"
-	Bad  mark = "-"
+	Unknown mark = "?"
+	Good    mark = "+"
+	Bad     mark = "-"
 )
 
 type Storage interface {

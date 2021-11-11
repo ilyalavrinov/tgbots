@@ -92,6 +92,7 @@ func (s *redisStorage) loadSettings(ctx context.Context, chatId int64) ([]string
 			return nil, nil, err
 		}
 		kids[kidName] = aliases
+		kids[kidName] = append(kids[kidName], kidName)
 	}
 
 	return parents, kids, nil
