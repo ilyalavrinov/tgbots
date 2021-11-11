@@ -13,6 +13,7 @@ const (
 )
 
 type Storage interface {
-	add(ctx context.Context, childName string, timestamp time.Time, val mark) error
-	get(ctx context.Context, childName string, t1, t2 time.Time) ([]mark, error)
+	add(ctx context.Context, chatId int64, childName string, timestamp time.Time, val mark) error
+	get(ctx context.Context, chatId int64, childName string, t1, t2 time.Time) ([]mark, error)
+	loadSettings(ctx context.Context, chatId int64) (parents []string, kids map[string][]string, err error)
 }
