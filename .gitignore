@@ -15,4 +15,5 @@
 # vendor/
 
 cmd/towarisch/towarisch
+cmd/familyguy/familyguy
 *.cfg
