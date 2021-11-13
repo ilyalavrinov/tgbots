@@ -48,7 +48,7 @@ func (h *kidScoreHandler) HandleOne(msg tgbotapi.Message) {
 	}
 
 	if !isParent {
-		log.WithFields(log.Fields{"id": msg.From.ID, "name": msg.From.UserName}).Debug("User is not a parent")
+		log.WithFields(log.Fields{"chat": msg.Chat.ID, "id": msg.From.ID, "name": msg.From.UserName}).Debug("User is not a parent")
 		return
 	}
 
@@ -80,7 +80,7 @@ func (h *kidScoreHandler) HandleOne(msg tgbotapi.Message) {
 
 	err = h.storage.add(ctx, msg.Chat.ID, targetChild, msg.Time(), m)
 	if err != nil {
-		log.WithFields(log.Fields{"err": err, "child": targetChild, "mark": m}).Error("Cannot add scor")
+		log.WithFields(log.Fields{"err": err, "child": targetChild, "mark": m}).Error("Cannot add score")
 		return
 	}
 
