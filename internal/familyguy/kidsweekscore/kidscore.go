@@ -81,7 +81,7 @@ func (h *kidScoreHandler) HandleOne(msg tgbotapi.Message) {
 
 	err = h.storage.add(ctx, msg.Chat.ID, targetChild, msg.Time(), m)
 	if err != nil {
-		log.WithFields(log.Fields{"err": err, "child": targetChild, "mark": m}).Error("Cannot add score")
+		log.WithFields(log.Fields{"err": err, "child": targetChild, "string": m}).Error("Cannot add score")
 		return
 	}
 

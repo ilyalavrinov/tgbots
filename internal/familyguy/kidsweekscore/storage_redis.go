@@ -33,17 +33,17 @@ func key(chatId int64, childName string, timestamp time.Time) string {
 	return fmt.Sprintf("kidscore:%d:kid:%s:%s", chatId, childName, timestamp.Format(layout))
 }
 
-func (s *redisStorage) add(ctx context.Context, chatId int64, childName string, timestamp time.Time, val mark) error {
+func (s *redisStorage) add(ctx context.Context, chatId int64, childName string, timestamp time.Time, val string) error {
 	return s.client.Set(ctx, key(chatId, childName, timestamp), val, ttl).Err()
 }
 
-func (s *redisStorage) get(ctx context.Context, chatId int64, childName string, t1, t2 time.Time) ([]mark, error) {
+func (s *redisStorage) get(ctx context.Context, chatId int64, childName string, t1, t2 time.Time) ([]string, error) {
 	keys, err := s.client.Keys(ctx, fmt.Sprintf("kidscore:%d:kid:%s:*", chatId, childName)).Result()
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]mark, 0, len(keys))
+	result := make([]string, 0, len(keys))
 	for _, k := range keys {
 		parts := strings.Split(k, ":")
 		if len(parts) != 4 {
@@ -64,7 +64,7 @@ func (s *redisStorage) get(ctx context.Context, chatId int64, childName string, 
 			return nil, err
 		}
 
-		result = append(result, mark(val))
+		result = append(result, val)
 	}
 
 	return result, nil
@@ -86,7 +86,7 @@ func (s *redisStorage) loadSettings(ctx context.Context, chatId int64) ([]string
 		if len(parts) != 4 {
 			return nil, nil, errors.New(fmt.Sprintf("Key %q cannot be correctly split", k))
 		}
-		kidName := parts[1]
+		kidName := parts[3]
 		aliases, err := s.client.LRange(ctx, k, 0, -1).Result()
 		if err != nil {
 			return nil, nil, err
