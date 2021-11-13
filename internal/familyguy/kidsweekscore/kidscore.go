@@ -55,6 +55,7 @@ func (h *kidScoreHandler) HandleOne(msg tgbotapi.Message) {
 	var targetChild string
 	for name, aliases := range kids {
 		for _, a := range aliases {
+			log.WithFields(log.Fields{"alias": a}).Debug("Comparing text with child alias")
 			if strings.Contains(strings.ToLower(msg.Text), strings.ToLower(a)) {
 				targetChild = name
 				break
