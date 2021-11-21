@@ -46,11 +46,11 @@ func (s *redisStorage) get(ctx context.Context, chatId int64, childName string, 
 	result := make([]string, 0, len(keys))
 	for _, k := range keys {
 		parts := strings.Split(k, ":")
-		if len(parts) != 4 {
+		if len(parts) != 5 {
 			return nil, errors.New(fmt.Sprintf("Key %q cannot be correctly split", k))
 		}
 
-		t, err := time.Parse(layout, parts[3])
+		t, err := time.Parse(layout, parts[4])
 		if err != nil {
 			return nil, err
 		}
