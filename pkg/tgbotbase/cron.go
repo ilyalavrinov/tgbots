@@ -1,9 +1,11 @@
 package tgbotbase
 
-import "time"
-import "log"
-import "sort"
-import "math"
+import (
+	"log"
+	"math"
+	"sort"
+	"time"
+)
 
 // Cron interface declares interfaces for communication with some cron daemon
 type Cron interface {
@@ -134,5 +136,6 @@ func CalcNextTimeFromMidnight(now time.Time, fromMidnight time.Duration) time.Ti
 	if nextTime.Before(now) {
 		nextTime = nextTime.Add(24 * time.Hour)
 	}
+	log.Printf("CalcNextTimeFromMidnight: now: %s; fromMidnight: %s; nextTime: %s", now, fromMidnight, nextTime)
 	return nextTime
 }
