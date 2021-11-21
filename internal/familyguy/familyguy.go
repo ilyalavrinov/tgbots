@@ -48,12 +48,12 @@ func Start(cfg_filename string) error {
 
 	rediscfg := fullcfg.Redis
 	redispool := tgbotbase.NewRedisPool(context.TODO(), rediscfg)
-	//propstorage := tgbotbase.NewRedisPropertyStorage(redispool)
+	propstorage := tgbotbase.NewRedisPropertyStorage(redispool)
 	kidstorage := kidsweekscore.NewRedisStorage(redispool)
-
-	//cron := tgbotbase.NewCron()
+	cron := tgbotbase.NewCron()
 
 	bot.AddHandler(tgbotbase.NewIncomingMessageDealer(kidsweekscore.NewKidScoreHandler(kidstorage)))
+	bot.AddHandler(tgbotbase.NewBackgroundMessageDealer(kidsweekscore.NewKidScoreResult(kidstorage, cron, propstorage)))
 	bot.Start()
 
 	log.Print("Stopping my bot")
