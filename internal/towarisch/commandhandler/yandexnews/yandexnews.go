@@ -20,8 +20,8 @@ const (
 )
 
 var YaNews = map[YaNewsTopic]string{
-	YaNewsCovid19: "https://news.yandex.ru/ru/koronavirus5.utf8.js",
-	YaNewsNN:      "https://news.yandex.ru/Nizhny_Novgorod/index5.utf8.js",
+	YaNewsCovid19: "http://news.yandex.ru/ru/koronavirus5.utf8.js",
+	YaNewsNN:      "http://news.yandex.ru/Nizhny_Novgorod/index5.utf8.js",
 }
 
 type YaNewsEntry struct {
