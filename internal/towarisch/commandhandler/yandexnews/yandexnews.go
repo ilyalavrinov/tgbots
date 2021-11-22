@@ -20,8 +20,8 @@ const (
 )
 
 var YaNews = map[YaNewsTopic]string{
-	YaNewsCovid19: "http://news.yandex.ru/ru/koronavirus5.utf8.js",
-	YaNewsNN:      "http://news.yandex.ru/Nizhny_Novgorod/index5.utf8.js",
+	YaNewsCovid19: "https://news.yandex.ru/ru/koronavirus5.utf8.js",
+	YaNewsNN:      "https://news.yandex.ru/Nizhny_Novgorod/index5.utf8.js",
 }
 
 type YaNewsEntry struct {
@@ -42,7 +42,13 @@ func LoadYaNews(topic YaNewsTopic) ([]YaNewsEntry, error) {
 		return nil, errors.New("unknown news topic")
 	}
 
-	resp, err := http.Get(url)
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "url": url}).Error("request creation failed")
+		return nil, err
+	}
+	request.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:94.0) Gecko/20100101 Firefox/94.0")
+	resp, err := (&http.Client{}).Do(request)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "url": url}).Error("get failed")
 		return nil, err
