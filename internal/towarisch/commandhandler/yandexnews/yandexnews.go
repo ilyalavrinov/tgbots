@@ -49,6 +49,10 @@ func LoadYaNews(topic YaNewsTopic) ([]YaNewsEntry, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("Yandex News returned unexpected code %d", resp.StatusCode)
+	}
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("read failed")
