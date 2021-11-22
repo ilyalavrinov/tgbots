@@ -136,6 +136,15 @@ func CalcNextTimeFromMidnight(now time.Time, fromMidnight time.Duration) time.Ti
 	if nextTime.Before(now) {
 		nextTime = nextTime.Add(24 * time.Hour)
 	}
-	log.Printf("CalcNextTimeFromMidnight: now: %s; fromMidnight: %s; nextTime: %s", now, fromMidnight, nextTime)
 	return nextTime
+}
+
+func CalcNextTriggerDay(now time.Time, dayOfWeek time.Weekday, fromMidnight time.Duration) time.Time {
+	dayMult := dayOfWeek - now.Weekday()
+	if dayMult < 0 {
+		dayMult += 7
+	}
+	triggerDay := now.Add(time.Duration(dayMult) * 24 * time.Hour)
+	midnight := triggerDay.Truncate(24 * time.Hour)
+	return midnight.Add(fromMidnight)
 }

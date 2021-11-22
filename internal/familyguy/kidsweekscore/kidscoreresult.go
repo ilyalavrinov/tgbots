@@ -50,13 +50,7 @@ func (h *kidScoreResult) Run() {
 			continue
 		}
 
-		dayMult := 0
-		d := time.Now().Weekday()
-		if d != time.Sunday {
-			dayMult = 7 - int(d)
-		}
-		triggerDay := time.Now().Add(time.Duration(dayMult) * 24 * time.Hour)
-		when := tgbotbase.CalcNextTimeFromMidnight(triggerDay, dur)
+		when := tgbotbase.CalcNextTriggerDay(time.Now(), time.Sunday, dur)
 		job := kidScoreResultJob{
 			chatID:  prop.Chat,
 			storage: h.storage,
