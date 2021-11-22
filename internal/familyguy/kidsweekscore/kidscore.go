@@ -85,7 +85,13 @@ func (h *kidScoreHandler) HandleOne(msg tgbotapi.Message) {
 		return
 	}
 
-	replyText := fmt.Sprintf("Готово! Позже буду выводить текущее кол-во очков")
+	replyText := "Принято!"
+	positives, negatives, err := scoresThisWeek(ctx, h.storage, msg.Chat.ID, targetChild)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err, "kid": targetChild}).Error("Cannot get this week scores")
+	}
+
+	replyText = fmt.Sprintf("%s Сейчас %d плюсов и %d минусов", replyText, positives, negatives)
 	replyMsg := tgbotapi.NewMessage(msg.Chat.ID, replyText)
 	replyMsg.BaseChat.ReplyToMessageID = msg.MessageID
 	h.OutMsgCh <- replyMsg

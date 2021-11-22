@@ -79,23 +79,10 @@ func (job *kidScoreResultJob) Do(scheduledWhen time.Time, cron tgbotbase.Cron) {
 	}
 	msg := "Недельные результаты:"
 	for kid := range settings.kidsAliases {
-		t2 := time.Now()
-		t1 := t2.Add(-7 * 24 * time.Hour)
-
-		marks, err := job.storage.get(ctx, int64(job.chatID), kid, t1, t2)
+		positives, negatives, err := scoresThisWeek(ctx, job.storage, int64(job.chatID), kid)
 		if err != nil {
 			log.WithFields(log.Fields{"err": err, "chat": job.chatID, "kid": kid}).Error("Could not load marks")
 			return
-		}
-		positives := 0
-		negatives := 0
-		for _, mark := range marks {
-			switch mark {
-			case Good:
-				positives++
-			case Bad:
-				negatives++
-			}
 		}
 		total := positives + negatives
 		age := time.Now().Sub(settings.kidsBirthdays[kid]) % (365 * 24 * time.Hour)
@@ -106,4 +93,29 @@ func (job *kidScoreResultJob) Do(scheduledWhen time.Time, cron tgbotbase.Cron) {
 		msg = fmt.Sprintf("%s\n%d в копилку; %d на приставку", msg, moneyToKid, int(totalMoney)-moneyToKid)
 	}
 	job.OutMsgCh <- tgbotapi.NewMessage(int64(job.chatID), msg)
+}
+
+func scoresThisWeek(ctx context.Context, storage Storage, chatId int64, kid string) (int, int, error) {
+	t2 := time.Now()
+	dayMult := t2.Weekday() - time.Monday
+	if dayMult < 0 {
+		dayMult += 7
+	}
+	t1 := t2.Add(-time.Duration(dayMult) * 24 * time.Hour)
+	log.WithFields(log.Fields{"t1": t1.Format(time.RFC3339), "t2": t2.Format(time.RFC3339), "kid": kid, "chatID": chatId}).Debug("Loading marks")
+	marks, err := storage.get(ctx, chatId, kid, t1, t2)
+	if err != nil {
+		return 0, 0, err
+	}
+	positives := 0
+	negatives := 0
+	for _, mark := range marks {
+		switch mark {
+		case Good:
+			positives++
+		case Bad:
+			negatives++
+		}
+	}
+	return positives, negatives, nil
 }
