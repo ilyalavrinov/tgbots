@@ -72,13 +72,13 @@ func (job *kidScoreResultJob) Do(scheduledWhen time.Time, cron tgbotbase.Cron) {
 	defer cron.AddJob(scheduledWhen.Add(7*24*time.Hour), job)
 
 	ctx := context.TODO()
-	_, kids, err := job.storage.loadSettings(ctx, int64(job.chatID))
+	settings, err := job.storage.loadSettings(ctx, int64(job.chatID))
 	if err != nil {
 		log.WithFields(log.Fields{"err": err, "chat": job.chatID}).Error("Could not load settings")
 		return
 	}
-	msg := "Недельный результаты:"
-	for kid := range kids {
+	msg := "Недельные результаты:"
+	for kid := range settings.kidsAliases {
 		t2 := time.Now()
 		t1 := t2.Add(-7 * 24 * time.Hour)
 
@@ -98,7 +98,12 @@ func (job *kidScoreResultJob) Do(scheduledWhen time.Time, cron tgbotbase.Cron) {
 			}
 		}
 		total := positives + negatives
-		msg = fmt.Sprintf("%s\n%s: %d :) ; %d :( ; всего: %d", msg, kid, positives, negatives, total)
+		age := time.Now().Sub(settings.kidsBirthdays[kid]) % (365 * 24 * time.Hour)
+		totalMoney := float32(settings.baseRate * int(age))
+		moneyToKid := int(totalMoney * float32(positives) / float32(total))
+		log.WithFields(log.Fields{"kid": kid, "+": positives, "-": negatives, "total": total, "age": age, "totalMoney": totalMoney, "moneyToKid": moneyToKid}).Debug("week money calculation")
+		msg = fmt.Sprintf("%s\n\n%s: '+' %d; '-' %d", msg, kid, positives, negatives)
+		msg = fmt.Sprintf("%s\n%d в копилку; %d на приставку", msg, moneyToKid, int(totalMoney)-moneyToKid)
 	}
 	job.OutMsgCh <- tgbotapi.NewMessage(int64(job.chatID), msg)
 }

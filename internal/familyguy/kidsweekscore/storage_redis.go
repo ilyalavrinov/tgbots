@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,6 +29,7 @@ func NewRedisStorage(pool tgbotbase.RedisPool) *redisStorage {
 }
 
 var layout = "20060102T150405.999"
+var birthdayLayout = "20060102"
 
 func key(chatId int64, childName string, timestamp time.Time) string {
 	return fmt.Sprintf("kidscore:%d:kid:%s:%s", chatId, childName, timestamp.Format(layout))
@@ -70,30 +72,58 @@ func (s *redisStorage) get(ctx context.Context, chatId int64, childName string, 
 	return result, nil
 }
 
-func (s *redisStorage) loadSettings(ctx context.Context, chatId int64) ([]string, map[string][]string, error) {
+func (s *redisStorage) loadSettings(ctx context.Context, chatId int64) (settings, error) {
 	parents, err := s.client.LRange(ctx, fmt.Sprintf("kidscore:%d:parents", chatId), 0, -1).Result()
 	if err != nil {
-		return nil, nil, err
+		return settings{}, err
 	}
 
 	keys, err := s.client.Keys(ctx, fmt.Sprintf("kidscore:%d:kidAlias:*", chatId)).Result()
 	if err != nil {
-		return nil, nil, err
+		return settings{}, err
 	}
 	kids := make(map[string][]string, len(keys))
 	for _, k := range keys {
 		parts := strings.Split(k, ":")
 		if len(parts) != 4 {
-			return nil, nil, errors.New(fmt.Sprintf("Key %q cannot be correctly split", k))
+			return settings{}, errors.New(fmt.Sprintf("Key %q cannot be correctly split", k))
 		}
 		kidName := parts[3]
 		aliases, err := s.client.LRange(ctx, k, 0, -1).Result()
 		if err != nil {
-			return nil, nil, err
+			return settings{}, err
 		}
 		kids[kidName] = aliases
 		kids[kidName] = append(kids[kidName], kidName)
 	}
 
-	return parents, kids, nil
+	kidsBirthdays := make(map[string]time.Time)
+	for k := range kids {
+		bdayStr, err := s.client.Get(ctx, fmt.Sprintf("kidscore:%d:kidAge:%s", chatId, k)).Result()
+		if err != nil {
+			return settings{}, err
+		}
+		bday, err := time.Parse(birthdayLayout, bdayStr)
+		if err != nil {
+			return settings{}, err
+		}
+		kidsBirthdays[k] = bday
+	}
+
+	rateStr, err := s.client.Get(ctx, fmt.Sprintf("kidscore:%d:baseRate", chatId)).Result()
+	if err != nil {
+		return settings{}, err
+	}
+	rate, err := strconv.Atoi(rateStr)
+	if err != nil {
+		return settings{}, err
+	}
+
+	res := settings{
+		parents:       parents,
+		kidsAliases:   kids,
+		kidsBirthdays: kidsBirthdays,
+		baseRate:      rate,
+	}
+	return res, nil
 }

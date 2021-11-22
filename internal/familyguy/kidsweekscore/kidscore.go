@@ -33,14 +33,14 @@ func (h *kidScoreHandler) Name() string {
 
 func (h *kidScoreHandler) HandleOne(msg tgbotapi.Message) {
 	ctx := context.TODO()
-	parents, kids, err := h.storage.loadSettings(ctx, msg.Chat.ID)
+	settings, err := h.storage.loadSettings(ctx, msg.Chat.ID)
 	if err != nil {
 		log.WithField("err", err).Error("Cannot load settings")
 		return
 	}
 
 	isParent := false
-	for _, p := range parents {
+	for _, p := range settings.parents {
 		if p == strconv.Itoa(msg.From.ID) {
 			isParent = true
 			break
@@ -53,7 +53,7 @@ func (h *kidScoreHandler) HandleOne(msg tgbotapi.Message) {
 	}
 
 	var targetChild string
-	for name, aliases := range kids {
+	for name, aliases := range settings.kidsAliases {
 		for _, a := range aliases {
 			log.WithFields(log.Fields{"alias": a}).Debug("Comparing text with child alias")
 			if strings.Contains(strings.ToLower(msg.Text), strings.ToLower(a)) {
