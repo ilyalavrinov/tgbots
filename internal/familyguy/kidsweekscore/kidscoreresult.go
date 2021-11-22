@@ -101,7 +101,7 @@ func scoresThisWeek(ctx context.Context, storage Storage, chatId int64, kid stri
 	if dayMult < 0 {
 		dayMult += 7
 	}
-	t1 := t2.Add(-time.Duration(dayMult) * 24 * time.Hour)
+	t1 := t2.Add(-time.Duration(dayMult) * 24 * time.Hour).Truncate(24 * time.Hour)
 	log.WithFields(log.Fields{"t1": t1.Format(time.RFC3339), "t2": t2.Format(time.RFC3339), "kid": kid, "chatID": chatId}).Debug("Loading marks")
 	marks, err := storage.get(ctx, chatId, kid, t1, t2)
 	if err != nil {
