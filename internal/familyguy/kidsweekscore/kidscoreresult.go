@@ -85,7 +85,7 @@ func (job *kidScoreResultJob) Do(scheduledWhen time.Time, cron tgbotbase.Cron) {
 			return
 		}
 		total := positives + negatives
-		age := time.Now().Sub(settings.kidsBirthdays[kid]) % (365 * 24 * time.Hour)
+		age := time.Now().Sub(settings.kidsBirthdays[kid]) / (365 * 24 * time.Hour)
 		totalMoney := float32(settings.baseRate * int(age))
 		moneyToKid := int(totalMoney * float32(positives) / float32(total))
 		log.WithFields(log.Fields{"kid": kid, "+": positives, "-": negatives, "total": total, "age": age, "totalMoney": totalMoney, "moneyToKid": moneyToKid}).Debug("week money calculation")
