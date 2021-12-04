@@ -3,6 +3,7 @@ package kidsweekscore
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -38,7 +39,8 @@ func (h *kidScoreResult) Name() string {
 }
 
 func (h *kidScoreResult) Run() {
-	props, _ := h.props.GetEveryHavingProperty(context.TODO(), "kidsScoreResultTime")
+	ctx := context.TODO()
+	props, _ := h.props.GetEveryHavingProperty(ctx, "kidsScoreResultTime")
 	for _, prop := range props {
 		if (prop.User != 0) && (tgbotbase.ChatID(prop.User) != prop.Chat) {
 			log.Printf("Morning weather: Skipping special setting for user %d in chat %d", prop.User, prop.Chat)
@@ -56,14 +58,22 @@ func (h *kidScoreResult) Run() {
 			storage: h.storage,
 		}
 		job.OutMsgCh = h.OutMsgCh
+
+		prop2, _ := h.props.GetProperty(ctx, "kidsScoreResultCopyToChat", 0, prop.Chat)
+		chat2, err := strconv.ParseInt(prop2, 10, 64)
+		if err == nil {
+			job.chatIDCopy = tgbotbase.ChatID(chat2)
+		}
+
 		h.cron.AddJob(when, &job)
 	}
 }
 
 type kidScoreResultJob struct {
 	tgbotbase.BaseHandler
-	chatID  tgbotbase.ChatID
-	storage Storage
+	chatID     tgbotbase.ChatID
+	chatIDCopy tgbotbase.ChatID
+	storage    Storage
 }
 
 var _ tgbotbase.CronJob = &kidScoreResultJob{}
@@ -92,7 +102,12 @@ func (job *kidScoreResultJob) Do(scheduledWhen time.Time, cron tgbotbase.Cron) {
 		msg = fmt.Sprintf("%s\n\n%s: '+' %d; '-' %d", msg, kid, positives, negatives)
 		msg = fmt.Sprintf("%s\n%d в копилку; %d на приставку", msg, moneyToKid, int(totalMoney)-moneyToKid)
 	}
+
 	job.OutMsgCh <- tgbotapi.NewMessage(int64(job.chatID), msg)
+
+	if job.chatIDCopy != 0 {
+		job.OutMsgCh <- tgbotapi.NewMessage(int64(job.chatIDCopy), msg)
+	}
 }
 
 func scoresThisWeek(ctx context.Context, storage Storage, chatId int64, kid string) (int, int, error) {
