@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/ilyalavrinov/tgbots/internal/familyguy/kidsweekscore"
+	"github.com/ilyalavrinov/tgbots/internal/familyguy/yadiskphoto"
 	"github.com/ilyalavrinov/tgbots/pkg/tgbotbase"
 	"gopkg.in/gcfg.v1"
 )
@@ -54,6 +55,7 @@ func Start(cfg_filename string) error {
 
 	bot.AddHandler(tgbotbase.NewIncomingMessageDealer(kidsweekscore.NewKidScoreHandler(kidstorage)))
 	bot.AddHandler(tgbotbase.NewBackgroundMessageDealer(kidsweekscore.NewKidScoreResult(kidstorage, cron, propstorage)))
+	bot.AddHandler(tgbotbase.NewBackgroundMessageDealer(yadiskphoto.NewDailyPhoto(cron, propstorage)))
 	bot.Start()
 
 	log.Print("Stopping my bot")
