@@ -16,4 +16,6 @@
 
 cmd/towarisch/towarisch
 cmd/familyguy/familyguy
+cmd/mtgbulkbuy/mtgbulkbuy
+cmd/mtgbulkbuycli/mtgbulkbuycli
 *.cfg
