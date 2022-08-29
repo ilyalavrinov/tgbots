@@ -144,7 +144,8 @@ func (c *CardResult) sortByPrice() {
 }
 
 type NamesResult struct {
-	AllSortedCards map[string]CardResult
+	AllSortedCards    map[string]CardResult
+	NotAvailableCards []string
 
 	MinPricesNoDelivery          map[string][]CardPrice
 	WithDeliveryByEliminateFewer map[string]CardPrice
@@ -191,7 +192,11 @@ func ProcessByNames(req NamesRequest) (*NamesResult, error) {
 		cardRes.merge(searchAutumnsMagic(englishName, allNames))
 		cardRes.merge(searchTopDeck(name))
 		cardRes.sortByPrice()
-		result.AllSortedCards[name] = cardRes
+		if cardRes.Available {
+			result.AllSortedCards[name] = cardRes
+		} else {
+			result.NotAvailableCards = append(result.NotAvailableCards, name)
+		}
 	}
 
 	greedyMinPrices, err := calcGreedyMinPrices(req, result.AllSortedCards)
@@ -304,12 +309,10 @@ func calcGreedyMinPrices(req NamesRequest, cards map[string]CardResult) (map[str
 
 	for name, reqCount := range req.Cards {
 		cardData, found := cards[name]
-		if !found {
-			return nil, fmt.Errorf("Card %q not found", name)
-		}
-
-		if !cardData.Available {
-			return nil, fmt.Errorf("Card %q is not available", name)
+		if !found || !cardData.Available {
+			logger.Debugw("card not ready for greedy calc, skipping",
+				"name", name)
+			continue
 		}
 
 		cardsFound := 0
