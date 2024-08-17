@@ -107,6 +107,7 @@ func run(cfg config) error {
 
 		if !update.Message.IsCommand() {
 			lgr.Warn("message is not a command")
+			continue
 		}
 
 		cmd := update.Message.Command()
