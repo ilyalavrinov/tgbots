@@ -15,12 +15,21 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+type pendingData struct {
+	torrentID      int64
+	originialMsgId int
+	originalChatId int64
+}
+
 type commandHandler struct {
 	cfg                config
 	tgbot              *tgbotapi.BotAPI
 	transmissionClient *transmissionrpc.Client
 
 	outCh chan tgbotapi.Chattable
+
+	pendingWatchlist map[int64]pendingData
+	pendingCh        chan pendingData
 }
 
 func newCommandHanler(cfg config, tgbot *tgbotapi.BotAPI, btclient *transmissionrpc.Client) *commandHandler {
@@ -29,18 +38,40 @@ func newCommandHanler(cfg config, tgbot *tgbotapi.BotAPI, btclient *transmission
 		tgbot:              tgbot,
 		transmissionClient: btclient,
 		outCh:              make(chan tgbotapi.Chattable),
+		pendingWatchlist:   make(map[int64]pendingData),
+		pendingCh:          make(chan pendingData),
 	}
 
 	go h.sendReplies()
+	go h.watchPending()
 
 	return h
 }
 
 func (h *commandHandler) sendReplies() {
 	for outMsg := range h.outCh {
+		slog.Info("send message")
+
 		msg, err := h.tgbot.Send(outMsg)
+		var (
+			chatId    int64 = -1
+			chatName  string
+			replyToId int = -1
+		)
+		if msg.Chat != nil {
+			chatId = msg.Chat.ID
+			chatName = msg.Chat.UserName
+		}
+		if msg.ReplyToMessage != nil {
+			replyToId = msg.ReplyToMessage.MessageID
+		}
+
+		lgr := slog.With("msg.Chat.ID", chatId, "msg.Chat.UserName", chatName, "msg.ReplyToMessage.MessageID", replyToId)
+
 		if err != nil {
-			slog.Error("cannot send reply", "err", err, "msg.Chat.ID", msg.Chat.ID, "msg.Chat.UserName", msg.Chat.UserName, "msg.ReplyToMessage.MessageID", msg.ReplyToMessage.MessageID)
+			lgr.Error("send failed", "err", err)
+		} else {
+			lgr.Info("send success")
 		}
 	}
 }
@@ -101,6 +132,16 @@ func (h *commandHandler) handleAdd(msg *tgbotapi.Message, lgr *slog.Logger) erro
 	if err != nil {
 		return fmt.Errorf("cannot add torrent to transmission: %w", err)
 	}
+
+	h.pendingCh <- pendingData{
+		torrentID:      *torrent.ID,
+		originalChatId: msg.Chat.ID,
+		originialMsgId: msg.MessageID,
+	}
+
+	reply := tgbotapi.NewMessage(msg.Chat.ID, "ok!")
+	reply.ReplyToMessageID = msg.MessageID
+	h.outCh <- reply
 
 	lgr.Info("torrent added", "torrent.Name", *torrent.Name)
 	return nil
@@ -206,4 +247,35 @@ func (h *commandHandler) handleDelete(msg *tgbotapi.Message, lgr *slog.Logger) e
 
 	lgr.Info("delete success", "ids", ids)
 	return nil
+}
+
+func (h *commandHandler) watchPending() {
+	ticker := time.NewTicker(30 * time.Second)
+	for {
+		select {
+		case newPending := <-h.pendingCh:
+			slog.Info("pending add new", "torrent_id", newPending.torrentID)
+			h.pendingWatchlist[newPending.torrentID] = newPending
+		case <-ticker.C:
+			for torrentID, data := range h.pendingWatchlist {
+				torrentData, err := h.transmissionClient.TorrentGetAllFor(context.TODO(), []int64{torrentID})
+				if err != nil {
+					slog.Error("pending get data failed", "torrent_id", torrentID, "err", err)
+					continue
+				}
+				torrent := torrentData[0]
+				isFinished := (*torrent.Status == transmissionrpc.TorrentStatusStopped || *torrent.Status == transmissionrpc.TorrentStatusSeed || *torrent.Status == transmissionrpc.TorrentStatusSeedWait)
+				if !isFinished {
+					continue
+				}
+
+				finishedText := fmt.Sprintf("Download finished!\nName: %s\nSize: %s; time spent: %s", *torrent.Name, torrent.TotalSize, *torrent.TimeDownloading)
+				replyMsg := tgbotapi.NewMessage(data.originalChatId, finishedText)
+				replyMsg.ReplyToMessageID = data.originialMsgId
+				h.outCh <- replyMsg
+				slog.Info("pending done", "torrent_id", torrentID)
+				delete(h.pendingWatchlist, torrentID)
+			}
+		}
+	}
 }
