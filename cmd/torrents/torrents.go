@@ -36,14 +36,7 @@ func run(cfg config) error {
 	if err != nil {
 		return fmt.Errorf("cannot connect to transmission: %w", err)
 	}
-
-	cmdHandler := &commandHandler{
-		cfg:                cfg,
-		tgbot:              bot,
-		transmissionClient: btclient,
-	}
-	routing := make(map[string]messageHandler)
-	routing["addtorrent"] = cmdHandler.handleAdd
+	cmdHandler := newCommandHanler(cfg, bot, btclient)
 
 	updateConfig := tgbotapi.NewUpdate(0)
 	updateConfig.Timeout = 30
@@ -51,54 +44,7 @@ func run(cfg config) error {
 
 	slog.Info("running", "tgbot.Self.UserName", bot.Self.UserName)
 	for update := range updates {
-		if update.Message == nil {
-			slog.Info("received update which is not a message")
-			continue
-		}
-
-		lgr := slog.Default().With("from.id", update.Message.From.ID, "from.username", update.Message.From.UserName, "chat.id", update.Message.Chat.ID, "chat.name", update.Message.Chat.Title)
-		if !cfg.allowedUsers[update.Message.From.ID] {
-			lgr.Warn("message from not-allowed user")
-			continue
-		}
-
-		if !update.Message.IsCommand() {
-			lgr.Warn("message is not a command")
-			continue
-		}
-
-		cmd := update.Message.Command()
-		lgr = lgr.With("command", cmd)
-		handler, found := routing[cmd]
-		if !found {
-			lgr.Warn("unknown command")
-			replyMsg := tgbotapi.NewMessage(update.Message.Chat.ID, "unknown command")
-			replyMsg.ReplyToMessageID = update.Message.MessageID
-			_, err := bot.Send(replyMsg)
-			if err != nil {
-				lgr.Error("cannot send reply", "err", err)
-			}
-			continue
-		}
-
-		err := handler(update.Message, lgr)
-		if err != nil {
-			lgr.Error("handler error", "err", err)
-			replyMsg := tgbotapi.NewMessage(update.Message.Chat.ID, "handler failed")
-			replyMsg.ReplyToMessageID = update.Message.MessageID
-			_, err := bot.Send(replyMsg)
-			if err != nil {
-				lgr.Error("cannot send reply", "err", err)
-			}
-			continue
-		}
-
-		replyMsg := tgbotapi.NewMessage(update.Message.Chat.ID, "handler ok!")
-		replyMsg.ReplyToMessageID = update.Message.MessageID
-		_, err = bot.Send(replyMsg)
-		if err != nil {
-			lgr.Error("cannot send reply", "err", err)
-		}
+		cmdHandler.handleUpdate(update)
 	}
 	return nil
 }
