@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -71,6 +72,8 @@ func (h *commandHandler) handleUpdate(update tgbotapi.Update) {
 		handlerErr = h.handleStats(update.Message, lgr)
 	case "list", "listtorrents":
 		handlerErr = h.handleList(update.Message, lgr)
+	case "delete", "deletetorrents":
+		handlerErr = h.handleDelete(update.Message, lgr)
 	default:
 		lgr.Warn("unknown command")
 		replyMsg := tgbotapi.NewMessage(update.Message.Chat.ID, "unknown command")
@@ -161,10 +164,10 @@ func (h *commandHandler) handleList(msg *tgbotapi.Message, lgr *slog.Logger) err
 	for _, item := range list {
 		switch *item.Status {
 		case transmissionrpc.TorrentStatusStopped, transmissionrpc.TorrentStatusSeed, transmissionrpc.TorrentStatusSeedWait:
-			finishedText := fmt.Sprintf("ID: %d; Name: %s; Size: %s", item.ID, *item.Name, item.TotalSize)
+			finishedText := fmt.Sprintf("ID: %d; Name: %s; Size: %s", *item.ID, *item.Name, item.TotalSize)
 			finished = append(finished, finishedText)
 		default:
-			unfinishedText := fmt.Sprintf("ID: %d; Name: %s; Percent Complete: %.2f%%; ETA: %s (status: %s)", item.ID, *item.Name, *item.PercentComplete*100, time.Duration(*item.ETA)*time.Second, item.Status)
+			unfinishedText := fmt.Sprintf("ID: %d; Name: %s; Percent Complete: %.2f%%; ETA: %s (status: %s)", *item.ID, *item.Name, *item.PercentComplete*100, time.Duration(*item.ETA)*time.Second, item.Status)
 			inprogress = append(inprogress, unfinishedText)
 		}
 	}
@@ -179,5 +182,28 @@ func (h *commandHandler) handleList(msg *tgbotapi.Message, lgr *slog.Logger) err
 	unfinishedMsg := tgbotapi.NewMessage(msg.Chat.ID, unfinishedFullText)
 	h.outCh <- unfinishedMsg
 
+	return nil
+}
+
+func (h *commandHandler) handleDelete(msg *tgbotapi.Message, lgr *slog.Logger) error {
+	deleteIDs := strings.Fields(msg.CommandArguments())
+	ids := make([]int64, 0, len(deleteIDs))
+	for _, id := range deleteIDs {
+		val, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			return fmt.Errorf("cannot parse ID from %q: %w", id, err)
+		}
+		ids = append(ids, val)
+	}
+	deletePayload := transmissionrpc.TorrentRemovePayload{
+		IDs:             ids,
+		DeleteLocalData: true,
+	}
+	err := h.transmissionClient.TorrentRemove(context.TODO(), deletePayload)
+	if err != nil {
+		return fmt.Errorf("cannot remove torrents: %w", err)
+	}
+
+	lgr.Info("delete success", "ids", ids)
 	return nil
 }
